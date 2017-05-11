@@ -3,4 +3,4 @@
 ## 前提:
 - 先docker pull zookeeper、docker pull imlzw/solr
 - 下载docker-data,配置编排中的docker-data路径
-- 执行docker-compose
+- 执行docker-compose up
