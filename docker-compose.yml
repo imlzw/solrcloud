@@ -1,0 +1,108 @@
+version: '2'
+services:
+    zookeeper1:
+        image: zookeeper
+        restart: always
+        networks:
+            zknet:
+                ipv4_address: 172.15.0.2
+        ports:
+            - "2191:2181"
+        volumes:
+            - /c/docker-data/zookeeper/zookeeper1/data:/data
+            - /c/docker-data/zookeeper/zookeeper1/datalog:/datalog
+        environment:
+            - TZ=Asia/Shanghai
+            - ZOO_MY_ID=1
+            - ZOO_SERVERS=server.1=172.15.0.2:2888:3888 server.2=172.15.0.3:2888:3888 server.3=172.15.0.4:2888:3888
+
+    zookeeper2:
+        image: zookeeper
+        restart: always
+        networks:
+            zknet:
+                ipv4_address: 172.15.0.3
+        ports:
+            - "2192:2181"
+        volumes:
+            - /c/docker-data/zookeeper/zookeeper2/data:/data
+            - /c/docker-data/zookeeper/zookeeper2/datalog:/datalog
+        environment:
+            - TZ=Asia/Shanghai
+            - ZOO_MY_ID=2
+            - ZOO_SERVERS=server.1=172.15.0.2:2888:3888 server.2=172.15.0.3:2888:3888 server.3=172.15.0.4:2888:3888
+
+    zookeeper3:
+        image: zookeeper
+        restart: always
+        networks:
+            zknet:
+                ipv4_address: 172.15.0.4
+        ports:
+            - "2193:2181"
+        volumes:
+            - /c/docker-data/zookeeper/zookeeper3/data:/data
+            - /c/docker-data/zookeeper/zookeeper3/datalog:/datalog
+        environment:
+            - TZ=Asia/Shanghai
+            - ZOO_MY_ID=3
+            - ZOO_SERVERS=server.1=172.15.0.2:2888:3888 server.2=172.15.0.3:2888:3888 server.3=172.15.0.4:2888:3888
+            - SOLR_HOME=/opt/solr/server/solr/home
+    
+    updateconfig:
+        image: imlzw/solr
+        volumes:
+            - /c/docker-data/solrcloud:/opt/solrdata
+        command: /opt/solr/server/scripts/cloud-scripts/zkcli.sh -zkhost 172.15.0.1:2191,172.15.0.1:2192,172.15.0.1:2193/solr -cmd upconfig -confdir /opt/solrdata/newsconf -confname newsconf
+        links:
+            - zookeeper1
+            - zookeeper2
+            - zookeeper3
+
+    solrcloud1:
+        image: imlzw/solr
+        restart: always
+        ports:
+            - "8991:8983"
+        volumes:
+            - /c/docker-data/solrcloud:/opt/solrdata
+        environment:
+            - TZ=Asia/Shanghai
+        command: docker-entrypoint.sh -c -z 172.15.0.1:2191,172.15.0.1:2192,172.15.0.1:2193/solr -s /opt/solrdata/node1 
+        links:
+            - updateconfig
+
+    solrcloud2:
+        image: imlzw/solr
+        restart: always
+        ports:
+            - "8992:8983"
+        volumes:
+            - /c/docker-data/solrcloud:/opt/solrdata
+        environment:
+            - TZ=Asia/Shanghai
+        command: docker-entrypoint.sh -c -z 172.15.0.1:2191,172.15.0.1:2192,172.15.0.1:2193/solr -s /opt/solrdata/node2
+        links:
+            - updateconfig
+
+    solrcloud3:
+        image: imlzw/solr
+        restart: always
+        ports:
+            - "8993:8983"
+        volumes:
+            - /c/docker-data/solrcloud:/opt/solrdata
+        environment:
+            - TZ=Asia/Shanghai
+        command: docker-entrypoint.sh -c -z 172.15.0.1:2191,172.15.0.1:2192,172.15.0.1:2193/solr -s /opt/solrdata/node3
+        links:
+            - updateconfig
+
+networks:
+  zknet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.15.0.0/16
+        gateway: 172.15.0.1
